@@ -1,0 +1,232 @@
+.player-bar {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(320px, 2fr) minmax(220px, 1fr);
+  align-items: center;
+  gap: 16px;
+  height: var(--player-h);
+  padding: 0 16px;
+  flex: 0 0 auto;
+  background: rgb(12 12 16 / 92%);
+  border-top: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+}
+
+.player-bar__error {
+  position: absolute;
+  top: -34px;
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  background: rgb(255 95 87 / 16%);
+  border: 1px solid rgb(255 95 87 / 40%);
+  color: #ffb3ae;
+  font-size: 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+  white-space: nowrap;
+  max-width: 80vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-bar__error.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.player-bar__left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.player-bar__nowplaying {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+  padding: 4px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  text-align: left;
+  transition: background var(--dur) var(--ease);
+}
+
+.player-bar__nowplaying:hover {
+  background: var(--bg-hover);
+}
+
+.player-bar__art {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: var(--bg-raised);
+  color: var(--text-dim);
+}
+
+.player-bar__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.player-bar__title {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-bar__title:hover {
+  text-decoration: underline;
+}
+
+.player-bar__artist {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-bar__center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.player-bar__controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.player-bar__side-btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  position: relative;
+  transition: color var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+
+.player-bar__side-btn:hover {
+  color: var(--text);
+  transform: scale(1.06);
+}
+
+.player-bar__main-btn {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--text);
+  color: #000;
+  transition: transform var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+
+.player-bar__main-btn:hover {
+  transform: scale(1.07);
+}
+
+.player-bar__main-btn.is-loading {
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.player-bar__progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 620px;
+}
+
+.player-bar__seek-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.player-bar__time {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  min-width: 38px;
+  text-align: center;
+}
+
+.player-bar__seek-wrap .player-bar__time {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-active);
+  color: var(--text);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+
+.player-bar__seek-wrap .player-bar__time.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.player-bar__right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.player-bar__volume-wrap {
+  width: 92px;
+  display: flex;
+  align-items: center;
+}
+
+.player-bar__queue-count {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  padding: 0 4px;
+}
+
+.player-bar__visualizer {
+  width: 96px;
+  height: 30px;
+  opacity: 0.9;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}

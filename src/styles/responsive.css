@@ -1,0 +1,170 @@
+@media (width <= 1180px) {
+  .track-table__head,
+  .track-row {
+    grid-template-columns: 42px minmax(180px, 2.4fr) minmax(120px, 1.4fr) 70px 108px;
+  }
+
+  .track-table__cell--hide-sm {
+    display: none;
+  }
+
+  .player-bar {
+    grid-template-columns: minmax(180px, 1fr) minmax(280px, 1.6fr) auto;
+  }
+
+  .player-bar__visualizer {
+    display: none;
+  }
+}
+
+@media (width <= 900px) {
+  :root {
+    --sidebar-w: 76px;
+    --player-h: 84px;
+  }
+
+  .brand__name,
+  .nav__label,
+  .nav__count,
+  .sidebar__section-title {
+    display: none;
+  }
+
+  .sidebar__section-head {
+    justify-content: center;
+    padding: 0 0 6px;
+  }
+
+  .nav__link {
+    justify-content: center;
+    padding: 12px;
+  }
+
+  .now__body {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .now__right {
+    order: 2;
+  }
+
+  .main {
+    padding: 0 16px 28px;
+  }
+
+  .offline-banner,
+  .scan-bar {
+    margin-left: 16px;
+    margin-right: 16px;
+  }
+}
+
+@media (width <= 720px) {
+  .layout {
+    grid-template-columns: 1fr;
+    padding: 0;
+  }
+
+  .sidebar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--player-h);
+    z-index: 40;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    border-radius: 0;
+    background: rgb(12 12 16 / 96%);
+    border-top: 1px solid var(--border);
+    backdrop-filter: blur(16px);
+  }
+
+  .brand,
+  .sidebar__playlists,
+  .sidebar__bottom > .nav__link {
+    display: none;
+  }
+
+  .nav {
+    flex-direction: row;
+    flex: 1;
+    justify-content: space-around;
+    padding: 0;
+  }
+
+  .layout__main {
+    border-radius: 0;
+  }
+
+  .player-bar {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: 'left controls';
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .player-bar__left {
+    grid-area: left;
+  }
+
+  .player-bar__center {
+    grid-area: controls;
+  }
+
+  .player-bar__right,
+  .player-bar__progress {
+    display: none;
+  }
+
+  .player-bar__progress {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -3px;
+    max-width: none;
+    display: flex;
+  }
+
+  .player-bar__time {
+    display: none;
+  }
+
+  .toast-stack {
+    bottom: calc(var(--player-h) + 62px);
+  }
+
+  .collection__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .collection__cover {
+    width: min(200px, 60vw);
+    height: auto;
+    aspect-ratio: 1;
+  }
+
+  .track-table__head,
+  .track-row {
+    grid-template-columns: 36px minmax(120px, 1fr) 56px 84px;
+    gap: 8px;
+  }
+
+  .track-table__cell--actions {
+    opacity: 1;
+  }
+
+  .track-row__artist,
+  .track-table__cell--time {
+    display: none;
+  }
+
+  .card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+    gap: 12px;
+  }
+}

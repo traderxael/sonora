@@ -1,0 +1,9 @@
+# Forzar LF en el repositorio: en Windows el autocrlf romperia los hashes del
+# precache del service worker y los diffs serian ilegibles.
+* text=auto eol=lf
+
+*.png binary
+*.ico binary
+*.woff2 binary
+*.mp3 binary
+*.ogg binary
