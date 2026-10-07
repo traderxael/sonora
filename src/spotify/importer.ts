@@ -136,6 +136,8 @@ export async function handleSpotifyOAuthCallback(): Promise<boolean> {
     const clientId = getSpotifyClientId();
     if (!clientId) throw new Error('Falta el Client ID guardado de tu app de Spotify.');
 
+    if (!code) throw new Error('Spotify no devolvió el código de autorización. Vuelve a intentarlo.');
+
     const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

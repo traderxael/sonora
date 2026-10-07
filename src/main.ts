@@ -3,6 +3,7 @@ import { registerSW } from 'virtual:pwa-register';
 import { mountShell } from './ui/shell';
 import { initStore, getState, notify, onRender, getTrack } from './state/store';
 import { startRouter } from './ui/router';
+import { handleSpotifyOAuthCallback } from './spotify/importer';
 import { playerBus } from './audio/player';
 import { toast } from './ui/toast';
 import * as db from './lib/db';
