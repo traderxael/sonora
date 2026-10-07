@@ -1,6 +1,22 @@
 import { h } from '../dom';
 import { icon } from '../icons';
-import { formatBytes } from '../../lib/utils';
+import { formatBytes, pluralize } from '../../lib/utils';
+import { searchAllSources } from '../../sources';
+import { addToPlaylist, createPlaylist, saveCandidate } from '../../state/playlists';
+import { setRoute } from '../../state/store';
+import { toast } from '../toast';
+import {
+  authorizeSpotifyPlaylist,
+  clearImportedSpotifyPlaylist,
+  getImportedSpotifyPlaylist,
+  getSpotifyCallbackError,
+  getSpotifyClientId,
+  parseSpotifyPlaylistUrl,
+  setSpotifyClientId,
+  spotifyRedirectUri,
+  type SpotifyPlaylistTrack,
+} from '../../spotify/importer';
+import type { RemoteCandidate } from '../../lib/types';
 
 let typedUrl = '';
 let activeController: AbortController | null = null;
@@ -191,6 +207,7 @@ export function renderDownloads(): HTMLElement {
       progress,
       sourceLink,
     ),
+    renderSpotifyImporter(),
     h(
       'section',
       { class: 'panel url-download__note' },
@@ -219,6 +236,427 @@ export function renderDownloads(): HTMLElement {
   );
 
   return view;
+}
+
+
+interface SpotifyMatchState {
+  loading: boolean;
+  saving: boolean;
+  candidates: RemoteCandidate[];
+  errors: string[];
+  addedKeys: Set<string>;
+  message: string;
+}
+
+let spotifyPlaylistUrlTyped = '';
+let spotifyLocalPlaylistName = 'Playlist importada';
+let spotifyMatches = new Map<string, SpotifyMatchState>();
+let spotifyMatchedPlaylistId: string | null = null;
+let spotifyPlaylistCreation: Promise<string> | null = null;
+
+function renderSpotifyImporter(): HTMLElement {
+  const clientIdInput = h('input', {
+    class: 'url-download__input spotify-import__input',
+    id: 'spotify-client-id',
+    type: 'text',
+    autocomplete: 'off',
+    spellcheck: false,
+    placeholder: 'Client ID de tu app de Spotify',
+    value: getSpotifyClientId(),
+    ariaLabel: 'Client ID de Spotify',
+  }) as HTMLInputElement;
+  const playlistUrlInput = h('input', {
+    class: 'url-download__input spotify-import__input',
+    id: 'spotify-playlist-url',
+    type: 'url',
+    inputMode: 'url',
+    autocomplete: 'url',
+    placeholder: 'https://open.spotify.com/playlist/…',
+    value: spotifyPlaylistUrlTyped,
+    ariaLabel: 'Enlace de playlist de Spotify',
+  }) as HTMLInputElement;
+  const playlistNameInput = h('input', {
+    class: 'url-download__input spotify-import__input',
+    id: 'spotify-sonora-name',
+    type: 'text',
+    maxlength: 80,
+    placeholder: 'Nombre de la playlist en Sonora',
+    value: spotifyLocalPlaylistName,
+    ariaLabel: 'Nombre de la playlist nueva en Sonora',
+  }) as HTMLInputElement;
+  const status = h('p', {
+    class: 'spotify-import__status',
+    role: 'status',
+    ariaLive: 'polite',
+    text: getSpotifyCallbackError() || 'Se mostrarán las canciones para que elijas versiones disponibles en fuentes libres.',
+  });
+  const redirect = spotifyRedirectUri();
+  const redirectText = h('code', { class: 'spotify-import__redirect', text: redirect });
+  const copyRedirect = h('button', {
+    class: 'btn btn--ghost spotify-import__copy',
+    type: 'button',
+    on: {
+      click: async () => {
+        try {
+          await navigator.clipboard.writeText(redirect);
+          status.textContent = 'URL de retorno copiada.';
+        } catch {
+          status.textContent = 'Copia manualmente la URL de retorno que aparece arriba.';
+        }
+      },
+    },
+    text: 'Copiar URL',
+  });
+
+  clientIdInput.addEventListener('input', () => {
+    try {
+      setSpotifyClientId(clientIdInput.value);
+    } catch (error) {
+      status.textContent = error instanceof Error ? error.message : 'No se pudo guardar el Client ID.';
+    }
+  });
+  playlistUrlInput.addEventListener('input', () => {
+    spotifyPlaylistUrlTyped = playlistUrlInput.value;
+  });
+  playlistNameInput.addEventListener('input', () => {
+    spotifyLocalPlaylistName = playlistNameInput.value;
+  });
+
+  const form = h(
+    'form',
+    {
+      class: 'spotify-import__form',
+      on: {
+        submit: (event: Event) => {
+          event.preventDefault();
+          const clientId = clientIdInput.value.trim();
+          const playlistId = parseSpotifyPlaylistUrl(playlistUrlInput.value);
+          if (!clientId) {
+            status.textContent = 'Pega el Client ID de tu app de Spotify.';
+            clientIdInput.focus();
+            return;
+          }
+          if (!playlistId) {
+            status.textContent = 'Pega un enlace válido de una playlist de Spotify.';
+            playlistUrlInput.focus();
+            return;
+          }
+          try {
+            setSpotifyClientId(clientId);
+            status.textContent = 'Conectando con Spotify…';
+            void authorizeSpotifyPlaylist(clientId, playlistId).catch((error: unknown) => {
+              status.textContent = error instanceof Error ? error.message : 'No se pudo abrir Spotify.';
+            });
+          } catch (error) {
+            status.textContent = error instanceof Error ? error.message : 'No se pudo iniciar la importación.';
+          }
+        },
+      },
+    },
+    h(
+      'label',
+      { class: 'spotify-import__field' },
+      h('span', { class: 'url-download__label', text: 'Client ID de tu app de Spotify' }),
+      clientIdInput,
+    ),
+    h(
+      'label',
+      { class: 'spotify-import__field' },
+      h('span', { class: 'url-download__label', text: 'Enlace de la playlist' }),
+      playlistUrlInput,
+    ),
+    h(
+      'label',
+      { class: 'spotify-import__field' },
+      h('span', { class: 'url-download__label', text: 'Nombre para la playlist de Sonora' }),
+      playlistNameInput,
+    ),
+    h(
+      'button',
+      { class: 'btn btn--primary spotify-import__submit', type: 'submit' },
+      icon('music', 18),
+      'Importar playlist',
+    ),
+  );
+
+  const panel = h(
+    'section',
+    { class: 'panel spotify-import' },
+    h(
+      'div',
+      { class: 'spotify-import__heading' },
+      h('span', { class: 'url-download__eyebrow' }, icon('music', 16), 'Importar playlist'),
+      h('h2', { class: 'spotify-import__title', text: 'Trae tu selección a Sonora.' }),
+      h('p', {
+        class: 'panel__text',
+        text: 'Conecta tu app de Spotify y pega el enlace. Sonora buscará versiones libres de cada canción; no descarga ni reproduce audio de Spotify.',
+      }),
+    ),
+    h(
+      'div',
+      { class: 'spotify-import__setup' },
+      h(
+        'p',
+        { class: 'spotify-import__setup-title', text: 'Configuración inicial' },
+      ),
+      h(
+        'ol',
+        { class: 'spotify-import__steps' },
+        h(
+          'li',
+          {},
+          'Crea una app en ',
+          h('a', { href: 'https://developer.spotify.com/dashboard', target: '_blank', rel: 'noreferrer noopener', text: 'Spotify for Developers' }),
+          ' y copia su Client ID.',
+        ),
+        h('li', {}, 'Agrega esta URL de retorno exacta en la configuración de la app:'),
+      ),
+      h('div', { class: 'spotify-import__redirect-row' }, redirectText, copyRedirect),
+      h('p', {
+        class: 'panel__hint',
+        text: 'Spotify puede limitar las playlists disponibles a las que posees o en las que colaboras. La lista importada vive solo en esta pestaña; en tu biblioteca se guardarán únicamente las pistas libres que elijas.',
+      }),
+    ),
+    form,
+    status,
+    h('div', { class: 'spotify-import__results' }),
+  );
+
+  const results = panel.querySelector<HTMLElement>('.spotify-import__results');
+  if (results) renderImportedSpotifyTracks(results);
+  return panel;
+}
+
+function renderImportedSpotifyTracks(container: HTMLElement): void {
+  const imported = getImportedSpotifyPlaylist();
+  const callbackError = getSpotifyCallbackError();
+  container.replaceChildren();
+  if (!imported) return;
+
+  const header = h(
+    'div',
+    { class: 'spotify-import__playlist' },
+    h(
+      'div',
+      {},
+      h('p', { class: 'spotify-import__playlist-kicker', text: 'Playlist leída desde Spotify' }),
+      h('h3', { class: 'spotify-import__playlist-title', text: imported.name }),
+      h('p', {
+        class: 'spotify-import__playlist-count',
+        text: imported.tracks.length + ' ' + pluralize(imported.tracks.length, 'canción'),
+      }),
+    ),
+    h(
+      'div',
+      { class: 'spotify-import__playlist-actions' },
+      h(
+        'a',
+        { class: 'btn btn--ghost', href: imported.url, target: '_blank', rel: 'noreferrer noopener' },
+        icon('external', 16),
+        'Abrir en Spotify',
+      ),
+      h(
+        'button',
+        {
+          class: 'btn btn--ghost',
+          type: 'button',
+          on: {
+            click: () => {
+              clearImportedSpotifyPlaylist();
+              spotifyMatches.clear();
+              spotifyMatchedPlaylistId = null;
+              spotifyPlaylistCreation = null;
+              container.replaceChildren();
+            },
+          },
+          text: 'Limpiar importación',
+        },
+      ),
+    ),
+  );
+
+  const notice = h('p', {
+    class: 'spotify-import__attribution',
+    text: 'Datos de la playlist proporcionados por Spotify. El audio se buscará por separado en archivos libres.',
+  });
+  container.append(header, notice);
+
+  if (callbackError) {
+    container.append(h('p', { class: 'spotify-import__status spotify-import__status--error', role: 'status', text: callbackError }));
+    return;
+  }
+  if (imported.tracks.length === 0) return;
+
+  const list = h('div', { class: 'spotify-track-list' });
+  for (const track of imported.tracks) list.append(renderSpotifyTrack(track));
+  container.append(list);
+  if (spotifyMatchedPlaylistId) {
+    container.append(
+      h(
+        'button',
+        {
+          class: 'btn btn--ghost spotify-import__open-playlist',
+          type: 'button',
+          on: { click: () => setRoute({ name: 'playlist', params: { id: spotifyMatchedPlaylistId ?? '' } }) },
+        },
+        icon('playlist', 17),
+        'Abrir playlist de Sonora',
+      ),
+    );
+  }
+}
+
+function renderSpotifyTrack(track: SpotifyPlaylistTrack): HTMLElement {
+  let state = spotifyMatches.get(track.id);
+  if (!state) {
+    state = { loading: false, saving: false, candidates: [], errors: [], addedKeys: new Set(), message: '' };
+    spotifyMatches.set(track.id, state);
+  }
+
+  const searchButton = h(
+    'button',
+    {
+      class: 'btn btn--ghost spotify-track__search',
+      type: 'button',
+      disabled: state.loading,
+      on: {
+        click: () => void searchFreeMatches(track),
+      },
+    },
+    icon(state.loading ? 'refresh' : 'search', 16),
+    state.loading ? 'Buscando…' : state.candidates.length ? 'Buscar de nuevo' : 'Buscar versión libre',
+  );
+  const row = h(
+    'article',
+    { class: 'spotify-track' },
+    track.artworkUrl
+      ? h('img', { class: 'spotify-track__art', src: track.artworkUrl, alt: '', loading: 'lazy' })
+      : h('div', { class: 'spotify-track__art spotify-track__art--empty' }, icon('music', 18)),
+    h(
+      'div',
+      { class: 'spotify-track__body' },
+      h('strong', { class: 'spotify-track__title', text: track.title }),
+      h('span', { class: 'spotify-track__artist', text: track.artist + (track.album ? ' · ' + track.album : '') }),
+    ),
+    searchButton,
+  );
+  row.dataset.spotifyTrackId = track.id;
+
+  if (state.errors.length) {
+    row.append(h('p', { class: 'spotify-track__message spotify-track__message--error', text: state.errors.join(' · ') }));
+  }
+  if (state.candidates.length) {
+    const choices = h('div', { class: 'spotify-track__matches' });
+    for (const candidate of state.candidates) {
+      const saved = state.addedKeys.has(candidate.key);
+      choices.append(
+        h(
+          'div',
+          { class: 'spotify-match' },
+          h(
+            'div',
+            { class: 'spotify-match__info' },
+            h('strong', { class: 'spotify-match__title', text: candidate.title }),
+            h('span', { class: 'spotify-match__artist', text: candidate.artist + ' · ' + sourceLabel(candidate.source) }),
+            h('span', { class: 'spotify-match__license', text: candidate.license ?? 'Revisa la licencia en la fuente' }),
+          ),
+          h(
+            'button',
+            {
+              class: 'btn btn--ghost spotify-match__add',
+              type: 'button',
+              disabled: saved || state.saving,
+              on: { click: () => void addFreeMatchToPlaylist(track, candidate, state) },
+              text: saved ? 'Añadida' : state.saving ? 'Guardando…' : 'Añadir',
+            },
+          ),
+        ),
+      );
+    }
+    row.append(choices);
+  } else if (state.message && !state.loading) {
+    row.append(h('p', { class: 'spotify-track__message', text: state.message }));
+  }
+  return row;
+}
+
+async function searchFreeMatches(track: SpotifyPlaylistTrack): Promise<void> {
+  const state = spotifyMatches.get(track.id);
+  if (!state || state.loading) return;
+  state.loading = true;
+  state.message = '';
+  state.errors = [];
+  const list = document.querySelector<HTMLElement>('.spotify-track-list');
+  if (list) rerenderSpotifyTrack(list, track);
+  const controller = new AbortController();
+  try {
+    const result = await searchAllSources(track.title + ' ' + track.artist, 4, controller.signal);
+    state.candidates = result.results.slice(0, 6);
+    state.errors = result.errors.map((item) => item.provider + ': ' + item.message);
+    state.message = state.candidates.length
+      ? 'Elige la versión que corresponda; revisa la licencia antes de usarla.'
+      : 'No encontramos una coincidencia libre. Puedes probar con otro nombre en Buscar.';
+  } catch (error) {
+    state.message = error instanceof Error ? error.message : 'No se pudo buscar esta canción.';
+  } finally {
+    state.loading = false;
+    const currentList = document.querySelector<HTMLElement>('.spotify-track-list');
+    if (currentList) rerenderSpotifyTrack(currentList, track);
+  }
+}
+
+function rerenderSpotifyTrack(list: HTMLElement, track: SpotifyPlaylistTrack): void {
+  const rows = [...list.querySelectorAll<HTMLElement>('[data-spotify-track-id]')];
+  const existing = rows.find((row) => row.dataset.spotifyTrackId === track.id);
+  const replacement = renderSpotifyTrack(track);
+  replacement.dataset.spotifyTrackId = track.id;
+  if (existing) existing.replaceWith(replacement);
+  else list.append(replacement);
+}
+
+async function addFreeMatchToPlaylist(
+  spotifyTrack: SpotifyPlaylistTrack,
+  candidate: RemoteCandidate,
+  state: SpotifyMatchState,
+): Promise<void> {
+  if (state.saving || state.addedKeys.has(candidate.key)) return;
+  state.saving = true;
+  try {
+    if (!spotifyMatchedPlaylistId) {
+      if (!spotifyPlaylistCreation) {
+        const name = spotifyLocalPlaylistName.trim() || 'Playlist importada';
+        spotifyPlaylistCreation = createPlaylist(name).then((playlist) => playlist.id).finally(() => {
+          spotifyPlaylistCreation = null;
+        });
+      }
+      spotifyMatchedPlaylistId = await spotifyPlaylistCreation;
+    }
+    const saved = await saveCandidate(candidate);
+    const added = await addToPlaylist(spotifyMatchedPlaylistId, [saved.id]);
+    state.addedKeys.add(candidate.key);
+    state.message = added ? 'Añadida a tu playlist de Sonora.' : 'Esta pista ya estaba en la playlist.';
+    toast({ message: state.message, kind: 'success' });
+  } catch (error) {
+    state.message = error instanceof Error ? error.message : 'No se pudo guardar la coincidencia.';
+    toast({ message: state.message, kind: 'error' });
+  } finally {
+    state.saving = false;
+    const list = document.querySelector<HTMLElement>('.spotify-track-list');
+    if (list) rerenderSpotifyTrack(list, spotifyTrack);
+  }
+}
+
+function sourceLabel(source: RemoteCandidate['source']): string {
+  switch (source) {
+    case 'internet-archive':
+      return 'Internet Archive';
+    case 'openverse':
+      return 'Openverse';
+    case 'wikimedia-commons':
+      return 'Wikimedia Commons';
+    default:
+      return 'Fuente libre';
+  }
 }
 
 function parseHttpUrl(value: string): URL | null {

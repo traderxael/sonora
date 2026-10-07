@@ -24,6 +24,7 @@ async function bootstrap(): Promise<void> {
     return;
   }
 
+  await handleSpotifyOAuthCallback();
   mountShell(root);
   startRouter();
 
