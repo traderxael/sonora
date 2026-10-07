@@ -114,6 +114,8 @@ function renderRoute(route: Route): HTMLElement {
       return renderSearch();
     case 'library':
       return renderLibrary(route.params);
+    case 'downloads':
+      return renderDownloads();
     case 'playlist':
       return renderPlaylist(route.params.id ?? '');
     case 'likes':
