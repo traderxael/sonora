@@ -17,7 +17,8 @@ export interface ImportedSpotifyPlaylist {
 interface PendingAuthorization {
   state: string;
   verifier: string;
-  playlistId: string;
+  kind: 'playlist' | 'saved-tracks';
+  playlistId?: string;
   redirectUri: string;
 }
 
@@ -78,12 +79,23 @@ export function parseSpotifyPlaylistUrl(value: string): string | null {
 }
 
 export async function authorizeSpotifyPlaylist(clientId: string, playlistId: string): Promise<void> {
+  return authorizeSpotify(clientId, { kind: 'playlist', playlistId });
+}
+
+export async function authorizeSpotifySavedTracks(clientId: string): Promise<void> {
+  return authorizeSpotify(clientId, { kind: 'saved-tracks' });
+}
+
+async function authorizeSpotify(
+  clientId: string,
+  target: { kind: 'playlist'; playlistId: string } | { kind: 'saved-tracks' },
+): Promise<void> {
   if (!clientId.trim()) throw new Error('Pega el Client ID de tu app de Spotify.');
   const redirectUri = spotifyRedirectUri();
   const state = randomToken(24);
   const verifier = randomToken(48);
   const challenge = await createChallenge(verifier);
-  const pending: PendingAuthorization = { state, verifier, playlistId, redirectUri };
+  const pending: PendingAuthorization = { state, verifier, redirectUri, ...target };
 
   try {
     sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending));
@@ -95,7 +107,7 @@ export async function authorizeSpotifyPlaylist(clientId: string, playlistId: str
     client_id: clientId.trim(),
     response_type: 'code',
     redirect_uri: redirectUri,
-    scope: 'playlist-read-private playlist-read-collaborative',
+    scope: 'playlist-read-private playlist-read-collaborative user-library-read',
     state,
     code_challenge_method: 'S256',
     code_challenge: challenge,
@@ -155,66 +167,10 @@ export async function handleSpotifyOAuthCallback(): Promise<boolean> {
     }
 
     const headers = { Authorization: 'Bearer ' + tokenBody.access_token };
-    const playlistResponse = await fetch(
-      'https://api.spotify.com/v1/playlists/' + encodeURIComponent(pending.playlistId) + '?fields=id,name,external_urls',
-      { headers },
-    );
-    if (!playlistResponse.ok) throw spotifyApiError(playlistResponse.status);
-    const playlistBody = (await playlistResponse.json()) as {
-      id?: string;
-      name?: string;
-      external_urls?: { spotify?: string };
-    };
-
-    const tracks: SpotifyPlaylistTrack[] = [];
-    let offset = 0;
-    let total = 0;
-    do {
-      const fields = 'items(item(id,name,type,artists(name),album(name,images(url)),duration_ms)),next,total';
-      const query = new URLSearchParams({ limit: '50', offset: String(offset), fields });
-      const response = await fetch(
-        'https://api.spotify.com/v1/playlists/' + encodeURIComponent(pending.playlistId) + '/items?' + query.toString(),
-        { headers },
-      );
-      if (!response.ok) throw spotifyApiError(response.status);
-      const page = (await response.json()) as {
-        items?: {
-          item?: {
-            id?: string;
-            name?: string;
-            type?: string;
-            artists?: { name?: string }[];
-            album?: { name?: string; images?: { url?: string }[] };
-            duration_ms?: number;
-          } | null;
-        }[];
-        total?: number;
-        next?: string | null;
-      };
-      total = page.total ?? 0;
-      for (const entry of page.items ?? []) {
-        const item = entry.item;
-        if (!item?.id || !item.name || item.type !== 'track') continue;
-        tracks.push({
-          id: item.id,
-          title: item.name,
-          artist: item.artists?.map((artist) => artist.name).filter(Boolean).join(', ') || 'Artista desconocido',
-          album: item.album?.name ?? '',
-          artworkUrl: item.album?.images?.[0]?.url,
-          duration: Math.round((item.duration_ms ?? 0) / 1000),
-        });
-      }
-      offset += page.items?.length ?? 0;
-      if (!page.items?.length || !page.next) break;
-    } while (offset < total);
-
-    importedPlaylist = {
-      id: playlistBody.id ?? pending.playlistId,
-      name: playlistBody.name ?? 'Playlist de Spotify',
-      url: playlistBody.external_urls?.spotify ?? 'https://open.spotify.com/playlist/' + pending.playlistId,
-      tracks,
-    };
-    if (tracks.length === 0) callbackError = 'Spotify no devolvió canciones accesibles en esta playlist.';
+    importedPlaylist = pending.kind === 'saved-tracks'
+      ? await readSpotifySavedTracks(headers)
+      : await readSpotifyPlaylist(headers, pending.playlistId ?? '');
+    if (importedPlaylist.tracks.length === 0) callbackError = 'Spotify no devolvió canciones accesibles en esta selección.';
   } catch (error) {
     callbackError = error instanceof Error ? error.message : 'No se pudo importar la playlist de Spotify.';
   } finally {
@@ -226,6 +182,112 @@ export async function handleSpotifyOAuthCallback(): Promise<boolean> {
     window.history.replaceState(null, '', spotifyRedirectUri() + '#/downloads');
   }
   return true;
+}
+
+async function readSpotifyPlaylist(
+  headers: { Authorization: string },
+  playlistId: string,
+): Promise<ImportedSpotifyPlaylist> {
+  if (!playlistId) throw new Error('Falta el identificador de la playlist.');
+
+  const playlistResponse = await fetch(
+    'https://api.spotify.com/v1/playlists/' + encodeURIComponent(playlistId) + '?fields=id,name,external_urls',
+    { headers },
+  );
+  if (!playlistResponse.ok) throw spotifyApiError(playlistResponse.status);
+  const playlistBody = (await playlistResponse.json()) as {
+    id?: string;
+    name?: string;
+    external_urls?: { spotify?: string };
+  };
+
+  const tracks: SpotifyPlaylistTrack[] = [];
+  let offset = 0;
+  let total = 0;
+  do {
+    const fields = 'items(item(id,name,type,artists(name),album(name,images(url)),duration_ms)),next,total';
+    const query = new URLSearchParams({ limit: '50', offset: String(offset), fields });
+    const response = await fetch(
+      'https://api.spotify.com/v1/playlists/' + encodeURIComponent(playlistId) + '/items?' + query.toString(),
+      { headers },
+    );
+    if (!response.ok) throw spotifyApiError(response.status);
+    const page = (await response.json()) as {
+      items?: {
+        item?: SpotifyApiTrack | null;
+      }[];
+      total?: number;
+      next?: string | null;
+    };
+    total = page.total ?? 0;
+    for (const entry of page.items ?? []) {
+      const track = mapSpotifyTrack(entry.item);
+      if (track) tracks.push(track);
+    }
+    offset += page.items?.length ?? 0;
+    if (!page.items?.length || !page.next) break;
+  } while (offset < total);
+
+  return {
+    id: playlistBody.id ?? playlistId,
+    name: playlistBody.name ?? 'Playlist de Spotify',
+    url: playlistBody.external_urls?.spotify ?? 'https://open.spotify.com/playlist/' + playlistId,
+    tracks,
+  };
+}
+
+async function readSpotifySavedTracks(
+  headers: { Authorization: string },
+): Promise<ImportedSpotifyPlaylist> {
+  const tracks: SpotifyPlaylistTrack[] = [];
+  let offset = 0;
+  let total = 0;
+  do {
+    const fields = 'items(track(id,name,type,artists(name),album(name,images(url)),duration_ms)),next,total';
+    const query = new URLSearchParams({ limit: '50', offset: String(offset), fields });
+    const response = await fetch('https://api.spotify.com/v1/me/tracks?' + query.toString(), { headers });
+    if (!response.ok) throw spotifyApiError(response.status);
+    const page = (await response.json()) as {
+      items?: { track?: SpotifyApiTrack | null }[];
+      total?: number;
+      next?: string | null;
+    };
+    total = page.total ?? 0;
+    for (const entry of page.items ?? []) {
+      const track = mapSpotifyTrack(entry.track);
+      if (track) tracks.push(track);
+    }
+    offset += page.items?.length ?? 0;
+    if (!page.items?.length || !page.next) break;
+  } while (offset < total);
+
+  return {
+    id: 'spotify:saved-tracks',
+    name: 'Canciones que te gustan',
+    url: 'https://open.spotify.com/collection/tracks',
+    tracks,
+  };
+}
+
+interface SpotifyApiTrack {
+  id?: string;
+  name?: string;
+  type?: string;
+  artists?: { name?: string }[];
+  album?: { name?: string; images?: { url?: string }[] };
+  duration_ms?: number;
+}
+
+function mapSpotifyTrack(item: SpotifyApiTrack | null | undefined): SpotifyPlaylistTrack | null {
+  if (!item?.id || !item.name || (item.type && item.type !== 'track')) return null;
+  return {
+    id: item.id,
+    title: item.name,
+    artist: item.artists?.map((artist) => artist.name).filter(Boolean).join(', ') || 'Artista desconocido',
+    album: item.album?.name ?? '',
+    artworkUrl: item.album?.images?.[0]?.url,
+    duration: Math.round((item.duration_ms ?? 0) / 1000),
+  };
 }
 
 function spotifyApiError(status: number): Error {
