@@ -193,10 +193,10 @@ function renderWelcome(): HTMLElement {
     'div',
     { class: 'welcome' },
     h('div', { class: 'welcome__logo' }, icon('disco', 56)),
-    h('h1', { class: 'welcome__title', text: 'Bienvenido a Sonora' }),
+    h('h1', { class: 'welcome__title', text: 'Tu música, a tu manera.' }),
     h('p', {
       class: 'welcome__text',
-      text: 'Un reproductor con la misma vibra que los grandes: tu musica, tus playlists y sin un solo anuncio. Y si se corta internet, sigue sonando.',
+      text: 'Tu colección, tus playlists y un reproductor que sigue sonando sin conexión. Sin anuncios; todo queda en tu dispositivo.',
     }),
     h(
       'div',
@@ -205,22 +205,22 @@ function renderWelcome(): HTMLElement {
         'button',
         { class: 'btn btn--primary btn--big', type: 'button', on: { click: () => void importFilesFlow() } },
         icon('folder', 20),
-        'Elegir mi carpeta de musica',
+        'Elegir carpeta de música',
       ),
       h(
         'button',
         { class: 'btn btn--ghost btn--big', type: 'button', on: { click: () => setRoute({ name: 'search', params: {} }) } },
         icon('search', 20),
-        'Buscar musica libre',
+        'Explorar música libre',
       ),
     ),
     h(
       'ul',
       { class: 'welcome__list' },
-      h('li', {}, icon('check', 16), 'Lee MP3, FLAC, OGG, M4A, WAV y mas desde tu disco'),
-      h('li', {}, icon('check', 16), 'Descarga pistas para escucharlas sin internet'),
-      h('li', {}, icon('check', 16), 'Cero publicidad, cero rastreo, todo queda en tu dispositivo'),
-      h('li', {}, icon('check', 16), 'Busca en Internet Archive, Openverse y Wikimedia Commons'),
+      h('li', {}, icon('check', 16), 'Lee MP3, FLAC, OGG, M4A, WAV y más desde tu disco'),
+      h('li', {}, icon('check', 16), 'Descarga música para escuchar sin conexión'),
+      h('li', {}, icon('check', 16), 'Sin anuncios ni rastreo. Tu biblioteca es privada'),
+      h('li', {}, icon('check', 16), 'Descubre música libre en Internet Archive, Openverse y Wikimedia Commons'),
     ),
   );
 }
