@@ -171,3 +171,68 @@
   font-variant-numeric: tabular-nums;
   font-size: 12px;
 }
+
+/* Sonora shell refinement */
+.app {
+  background:
+    radial-gradient(1100px 620px at 8% -10%, rgb(72 173 117 / 10%), transparent 62%),
+    radial-gradient(920px 520px at 94% 0%, rgb(135 116 207 / 8%), transparent 62%),
+    linear-gradient(145deg, #0b100d, var(--bg));
+}
+
+.layout {
+  gap: 10px;
+  padding: 10px 10px 0;
+}
+
+.layout__main {
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  background:
+    radial-gradient(900px 500px at 80% -10%, rgb(112 146 126 / 5%), transparent 65%),
+    linear-gradient(180deg, rgb(255 255 255 / 2.5%), transparent 180px),
+    var(--bg-elevated);
+  box-shadow: 0 20px 70px rgb(0 0 0 / 18%);
+}
+
+.main {
+  padding: 0 clamp(18px, 3vw, 42px) 40px;
+}
+
+.view {
+  width: min(100%, 1440px);
+  margin-inline: auto;
+  padding-bottom: 48px;
+}
+
+.topbar {
+  padding-inline: clamp(16px, 2.4vw, 28px);
+  background: linear-gradient(180deg, rgb(16 23 19 / 96%), rgb(16 23 19 / 76%) 72%, transparent);
+}
+
+.topbar__chip {
+  border-color: var(--border-strong);
+  background: rgb(255 255 255 / 4%);
+}
+
+/* Preserve the native hidden state despite the component display rules. */
+.offline-banner[hidden],
+.scan-bar[hidden] {
+  display: none !important;
+}
+
+.offline-banner,
+.scan-bar {
+  border-color: var(--border);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+
+.offline-banner {
+  background: linear-gradient(110deg, rgb(245 199 106 / 12%), rgb(245 199 106 / 6%));
+  border-color: rgb(245 199 106 / 22%);
+}
+
+.scan-bar {
+  background: rgb(25 35 29 / 88%);
+}

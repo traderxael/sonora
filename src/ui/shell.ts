@@ -8,6 +8,7 @@ import { clearPlaybackViewListeners } from '../audio/playback';
 import { renderHome } from './views/home';
 import { renderSearch } from './views/search';
 import { renderLibrary } from './views/library';
+import { renderDownloads } from './views/downloads';
 import { renderPlaylist } from './views/playlist';
 import { renderSettings } from './views/settings';
 import { renderNowPlaying } from './views/nowPlaying';
@@ -28,6 +29,7 @@ const PRIMARY_NAV: NavItem[] = [
   { id: 'home', label: 'Inicio', icon: 'home', route: { name: 'home', params: {} } },
   { id: 'search', label: 'Buscar', icon: 'search', route: { name: 'search', params: {} } },
   { id: 'library', label: 'Tu biblioteca', icon: 'library', route: { name: 'library', params: {} } },
+  { id: 'downloads', label: 'Descargas', icon: 'download', route: { name: 'downloads', params: {} } },
 ];
 
 export function mountShell(root: HTMLElement): void {
@@ -114,6 +116,8 @@ function renderRoute(route: Route): HTMLElement {
       return renderSearch();
     case 'library':
       return renderLibrary(route.params);
+    case 'downloads':
+      return renderDownloads();
     case 'playlist':
       return renderPlaylist(route.params.id ?? '');
     case 'likes':

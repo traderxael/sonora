@@ -92,7 +92,7 @@ export interface SearchProvider {
 
 export type RepeatMode = 'off' | 'all' | 'one';
 
-export type RouteName = 'home' | 'search' | 'library' | 'playlist' | 'likes' | 'settings' | 'now-playing';
+export type RouteName = 'home' | 'search' | 'library' | 'downloads' | 'playlist' | 'likes' | 'settings' | 'now-playing';
 
 export interface Route {
   name: RouteName;

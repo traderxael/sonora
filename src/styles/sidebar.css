@@ -125,3 +125,88 @@
   text-transform: uppercase;
   color: var(--text-dim);
 }
+
+/* Sidebar: softer surfaces and a clearer active route */
+.sidebar {
+  gap: 8px;
+  padding: 12px 6px 14px;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: rgb(15 22 18 / 78%);
+  backdrop-filter: blur(24px);
+}
+
+.brand {
+  gap: 12px;
+  padding: 10px 14px 17px;
+}
+
+.brand__mark {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #a0edbd, #52cf8b);
+  box-shadow: 0 8px 24px rgb(71 190 121 / 22%);
+}
+
+.brand__name {
+  font-size: 21px;
+  letter-spacing: -0.04em;
+}
+
+.nav {
+  gap: 4px;
+  padding-inline: 7px;
+}
+
+.nav__link {
+  position: relative;
+  min-height: 44px;
+  padding: 10px 13px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  transition:
+    background var(--dur) var(--ease),
+    color var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
+}
+
+.nav__link:hover {
+  background: rgb(255 255 255 / 5%);
+}
+
+.nav__link.is-active {
+  border-color: rgb(143 230 179 / 12%);
+  background: linear-gradient(90deg, rgb(143 230 179 / 14%), rgb(143 230 179 / 6%));
+  color: var(--text);
+}
+
+.nav__link.is-active::before {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 0;
+  width: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  content: '';
+}
+
+.nav__link.is-active svg {
+  color: var(--accent);
+}
+
+.nav__count {
+  color: var(--text-muted);
+}
+
+.sidebar__bottom {
+  margin-top: 12px;
+  border-color: var(--border);
+  padding-top: 14px;
+}
+
+.sidebar__section-title {
+  letter-spacing: 0.14em;
+}

@@ -1,7 +1,7 @@
 import type { Route, RouteName } from '../lib/types';
 import { setRoute } from '../state/store';
 
-const VALID: RouteName[] = ['home', 'search', 'library', 'playlist', 'likes', 'settings', 'now-playing'];
+const VALID: RouteName[] = ['home', 'search', 'library', 'downloads', 'playlist', 'likes', 'settings', 'now-playing'];
 
 export function parseHash(hash: string): Route {
   const clean = hash.replace(/^#\/?/, '');
