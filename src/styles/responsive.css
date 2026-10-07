@@ -351,3 +351,35 @@
   }
 }
 
+
+@media (width >= 721px) and (height <= 780px) {
+  .welcome {
+    min-height: 0;
+    gap: 10px;
+    padding-block: 36px;
+  }
+
+  .welcome__logo {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 2px;
+  }
+
+  .welcome__title {
+    font-size: clamp(36px, 4.4vw, 54px);
+  }
+
+  .welcome__text {
+    line-height: 1.6;
+  }
+
+  .welcome__list {
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .welcome__list li {
+    min-height: 44px;
+    padding: 7px 10px;
+  }
+}
