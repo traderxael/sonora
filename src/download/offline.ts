@@ -3,7 +3,7 @@ import { errorMessage, formatBytes } from '../lib/utils';
 import type { Track } from '../lib/types';
 import { getSessionFile } from '../library/sessionFiles';
 import { resolveFile, ensureReadPermission } from '../library/directories';
-import { getState, setOffline, setStorage, setDownload, getTrack } from '../state/store';
+import { getState, setOffline, setStorage, setDownload, getTrack, upsertTracks } from '../state/store';
 
 export class NeedsPermissionError extends Error {
   constructor() {
@@ -99,6 +99,33 @@ export async function downloadForOffline(track: Track, signal?: AbortSignal): Pr
     setDownload(track.id, { trackId: track.id, pct: 0, state: 'error', error: message });
     throw err;
   }
+}
+
+/** Registra un archivo obtenido por URL como pista de la biblioteca y copia offline. */
+export async function saveBlobForOffline(track: Track, blob: Blob): Promise<void> {
+  if (!blob.size) throw new Error('El archivo recibido está vacío.');
+  if (getState().tracks.has(track.id)) throw new Error('Esta pista ya existe en tu biblioteca.');
+
+  const entry: db.OfflineEntry = {
+    trackId: track.id,
+    blob,
+    size: blob.size,
+    savedAt: Date.now(),
+    contentType: blob.type || undefined,
+  };
+
+  await db.putOfflineEntry(entry);
+  try {
+    await db.putTrack(track);
+  } catch (error) {
+    await db.deleteOfflineEntry(track.id).catch(() => undefined);
+    throw error;
+  }
+
+  upsertTracks([track]);
+  setOffline(track.id, true);
+  setDownload(track.id, { trackId: track.id, pct: 100, state: 'done' });
+  setStorage(await db.offlineUsage());
 }
 
 async function fetchAsBlob(track: Track, report: (pct: number) => void, signal?: AbortSignal): Promise<Blob> {
