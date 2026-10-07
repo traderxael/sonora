@@ -1139,6 +1139,10 @@
   align-items: end;
 }
 
+.spotify-import__field[hidden] {
+  display: none;
+}
+
 .spotify-import__field {
   display: flex;
   flex-direction: column;
