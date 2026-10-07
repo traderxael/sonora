@@ -150,7 +150,7 @@ export function renderDownloads(): HTMLElement {
         chunks.push(new Uint8Array(await blob.arrayBuffer()));
       }
 
-      const blob = new Blob(chunks, { type: contentType || 'application/octet-stream' });
+      const blob = new Blob(chunks as BlobPart[], { type: contentType || 'application/octet-stream' });
       if (blob.size === 0) throw new Error('El archivo recibido está vacío.');
       const filename = buildFilename(response.headers.get('content-disposition'), url, contentType);
       saveBlob(blob, filename);
