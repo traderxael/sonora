@@ -1010,6 +1010,31 @@
   color: var(--accent);
 }
 
+.spotify-import__filter {
+  display: grid;
+  gap: 7px;
+  max-width: 560px;
+}
+
+.spotify-import__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.spotify-import__pagination .btn {
+  min-width: 104px;
+  justify-content: center;
+}
+
+.spotify-import__page-status {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
 @media (width <= 720px) {
   .url-download__form,
   .url-download__limits {
