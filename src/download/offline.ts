@@ -106,7 +106,7 @@ export async function saveBlobForOffline(track: Track, blob: Blob): Promise<void
   if (!blob.size) throw new Error('El archivo recibido está vacío.');
   if (getState().tracks.has(track.id)) throw new Error('Esta pista ya existe en tu biblioteca.');
 
-  const entry: db.OfflineEntry = {
+  const entry = {
     trackId: track.id,
     blob,
     size: blob.size,
