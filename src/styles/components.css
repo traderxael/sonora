@@ -1234,3 +1234,121 @@ input[type='range']::-moz-range-thumb {
   gap: 8px;
   flex: 0 0 auto;
 }
+
+/* Controls and library surfaces */
+.btn {
+  border-radius: 13px;
+  font-size: 13.5px;
+  letter-spacing: -0.01em;
+  transition:
+    transform var(--dur) var(--ease),
+    background var(--dur) var(--ease),
+    color var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn--primary {
+  background: linear-gradient(135deg, #a0edbd, #65d795);
+  box-shadow: 0 7px 22px rgb(71 190 121 / 16%);
+}
+
+.btn--primary:hover {
+  background: linear-gradient(135deg, #b7f2cc, #7be0a4);
+  box-shadow: 0 10px 25px rgb(71 190 121 / 21%);
+}
+
+.btn--ghost {
+  border: 1px solid var(--border-strong);
+  background: rgb(255 255 255 / 4%);
+}
+
+.btn--ghost:hover {
+  border-color: rgb(206 231 213 / 22%);
+  background: rgb(255 255 255 / 8%);
+}
+
+.btn--big {
+  padding: 13px 20px;
+}
+
+.icon-btn {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  transition:
+    transform var(--dur) var(--ease),
+    color var(--dur) var(--ease),
+    background var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
+}
+
+.icon-btn:hover:not(:disabled) {
+  border-color: var(--border);
+  background: rgb(255 255 255 / 6%);
+}
+
+.chip {
+  border-color: var(--border-strong);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 4%);
+}
+
+.card-grid {
+  gap: 16px;
+}
+
+.media-card {
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid transparent;
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgb(255 255 255 / 4.5%), rgb(255 255 255 / 2%));
+}
+
+.media-card:hover {
+  border-color: var(--border-strong);
+  background: linear-gradient(145deg, rgb(255 255 255 / 7%), rgb(255 255 255 / 3%));
+  box-shadow: var(--shadow-sm);
+}
+
+.media-card__art {
+  border-radius: 14px;
+}
+
+.section__title {
+  letter-spacing: -0.025em;
+}
+
+.track-table__head {
+  color: var(--text-dim);
+}
+
+.track-row {
+  border-radius: 12px;
+}
+
+.track-row:hover,
+.track-row:focus-visible {
+  background: rgb(255 255 255 / 4%);
+}
+
+.quick-pick {
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: rgb(255 255 255 / 4%);
+}
+
+.quick-pick:hover {
+  border-color: var(--border);
+  background: rgb(255 255 255 / 7%);
+}
+
+.empty-state {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgb(255 255 255 / 3.5%), rgb(255 255 255 / 1.5%));
+}
