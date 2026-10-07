@@ -345,7 +345,7 @@ function renderSpotifyImporter(): HTMLElement {
     }
     submitButton.replaceChildren(
       icon('music', 18),
-      document.createTextNode(useSavedTracks ? 'Importar canciones guardadas' : 'Importar playlist'),
+      document.createTextNode(useSavedTracks ? 'Importar canciones guardadas' : 'Importar desde Spotify'),
     );
   });
 
@@ -433,7 +433,7 @@ function renderSpotifyImporter(): HTMLElement {
       'div',
       { class: 'spotify-import__heading' },
       h('span', { class: 'url-download__eyebrow' }, icon('music', 16), 'Importar playlist'),
-      h('h2', { class: 'spotify-import__title', text: 'Trae tu selección a Sonora.' }),
+      h('h2', { class: 'spotify-import__title', text: 'Trae tu música a Sonora.' }),
       h('p', {
         class: 'panel__text',
         text: 'Importa tus canciones guardadas o pega una playlist. Sonora trae solo los datos de la música y busca versiones libres; no copia ni reproduce el audio de Spotify.',
