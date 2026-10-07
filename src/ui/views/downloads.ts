@@ -7,6 +7,7 @@ import { setRoute } from '../../state/store';
 import { toast } from '../toast';
 import {
   authorizeSpotifyPlaylist,
+  authorizeSpotifySavedTracks,
   clearImportedSpotifyPlaylist,
   getImportedSpotifyPlaylist,
   getSpotifyCallbackError,
@@ -249,7 +250,11 @@ interface SpotifyMatchState {
 }
 
 let spotifyPlaylistUrlTyped = '';
-let spotifyLocalPlaylistName = 'Playlist importada';
+let spotifyImportMode: 'playlist' | 'saved-tracks' = 'saved-tracks';
+let spotifyTrackPage = 0;
+let spotifyTrackQuery = '';
+const SPOTIFY_TRACK_PAGE_SIZE = 32;
+let spotifyLocalPlaylistName = 'Canciones que te gustan';
 let spotifyMatches = new Map<string, SpotifyMatchState>();
 let spotifyMatchedPlaylistId: string | null = null;
 let spotifyPlaylistCreation: Promise<string> | null = null;
@@ -265,6 +270,17 @@ function renderSpotifyImporter(): HTMLElement {
     value: getSpotifyClientId(),
     ariaLabel: 'Client ID de Spotify',
   }) as HTMLInputElement;
+  const sourceInput = h(
+    'select',
+    {
+      class: 'url-download__input spotify-import__input',
+      id: 'spotify-import-source',
+      ariaLabel: 'Qué quieres importar desde Spotify',
+    },
+    h('option', { value: 'saved-tracks', text: 'Mis canciones que te gustan' }),
+    h('option', { value: 'playlist', text: 'Una playlist por enlace' }),
+  ) as HTMLSelectElement;
+  sourceInput.value = spotifyImportMode;
   const playlistUrlInput = h('input', {
     class: 'url-download__input spotify-import__input',
     id: 'spotify-playlist-url',
@@ -318,9 +334,33 @@ function renderSpotifyImporter(): HTMLElement {
   playlistUrlInput.addEventListener('input', () => {
     spotifyPlaylistUrlTyped = playlistUrlInput.value;
   });
+  sourceInput.addEventListener('change', () => {
+    spotifyImportMode = sourceInput.value === 'playlist' ? 'playlist' : 'saved-tracks';
+    const useSavedTracks = spotifyImportMode === 'saved-tracks';
+    playlistUrlInput.disabled = useSavedTracks;
+    playlistUrlInput.closest('label')?.toggleAttribute('hidden', useSavedTracks);
+    if (spotifyLocalPlaylistName === 'Playlist importada' || spotifyLocalPlaylistName === 'Canciones que te gustan') {
+      spotifyLocalPlaylistName = useSavedTracks ? 'Canciones que te gustan' : 'Playlist importada';
+      playlistNameInput.value = spotifyLocalPlaylistName;
+    }
+    submitButton.replaceChildren(
+      icon('music', 18),
+      document.createTextNode(useSavedTracks ? 'Importar canciones guardadas' : 'Importar playlist'),
+    );
+  });
+
   playlistNameInput.addEventListener('input', () => {
     spotifyLocalPlaylistName = playlistNameInput.value;
   });
+
+  const submitButton = h(
+    'button',
+    { class: 'btn btn--primary spotify-import__submit', type: 'submit' },
+    icon('music', 18),
+    spotifyImportMode === 'saved-tracks' ? 'Importar canciones guardadas' : 'Importar playlist',
+  );
+  playlistUrlInput.disabled = spotifyImportMode === 'saved-tracks';
+  playlistUrlInput.closest('label')?.toggleAttribute('hidden', spotifyImportMode === 'saved-tracks');
 
   const form = h(
     'form',
@@ -330,13 +370,14 @@ function renderSpotifyImporter(): HTMLElement {
         submit: (event: Event) => {
           event.preventDefault();
           const clientId = clientIdInput.value.trim();
-          const playlistId = parseSpotifyPlaylistUrl(playlistUrlInput.value);
+          const isSavedTracks = sourceInput.value === 'saved-tracks';
+          const playlistId = isSavedTracks ? null : parseSpotifyPlaylistUrl(playlistUrlInput.value);
           if (!clientId) {
             status.textContent = 'Pega el Client ID de tu app de Spotify.';
             clientIdInput.focus();
             return;
           }
-          if (!playlistId) {
+          if (!isSavedTracks && !playlistId) {
             status.textContent = 'Pega un enlace válido de una playlist de Spotify.';
             playlistUrlInput.focus();
             return;
@@ -344,7 +385,10 @@ function renderSpotifyImporter(): HTMLElement {
           try {
             setSpotifyClientId(clientId);
             status.textContent = 'Conectando con Spotify…';
-            void authorizeSpotifyPlaylist(clientId, playlistId).catch((error: unknown) => {
+            const authorization = isSavedTracks
+              ? authorizeSpotifySavedTracks(clientId)
+              : authorizeSpotifyPlaylist(clientId, playlistId ?? '');
+            void authorization.catch((error: unknown) => {
               status.textContent = error instanceof Error ? error.message : 'No se pudo abrir Spotify.';
             });
           } catch (error) {
@@ -362,6 +406,12 @@ function renderSpotifyImporter(): HTMLElement {
     h(
       'label',
       { class: 'spotify-import__field' },
+      h('span', { class: 'url-download__label', text: 'Qué quieres importar' }),
+      sourceInput,
+    ),
+    h(
+      'label',
+      { class: 'spotify-import__field' },
       h('span', { class: 'url-download__label', text: 'Enlace de la playlist' }),
       playlistUrlInput,
     ),
@@ -371,12 +421,7 @@ function renderSpotifyImporter(): HTMLElement {
       h('span', { class: 'url-download__label', text: 'Nombre para la playlist de Sonora' }),
       playlistNameInput,
     ),
-    h(
-      'button',
-      { class: 'btn btn--primary spotify-import__submit', type: 'submit' },
-      icon('music', 18),
-      'Importar playlist',
-    ),
+    submitButton,
   );
 
   const panel = h(
@@ -389,7 +434,7 @@ function renderSpotifyImporter(): HTMLElement {
       h('h2', { class: 'spotify-import__title', text: 'Trae tu selección a Sonora.' }),
       h('p', {
         class: 'panel__text',
-        text: 'Conecta tu app de Spotify y pega el enlace. Sonora buscará versiones libres de cada canción; no descarga ni reproduce audio de Spotify.',
+        text: 'Importa tus canciones guardadas o pega una playlist. Sonora trae solo los datos de la música y busca versiones libres; no copia ni reproduce el audio de Spotify.',
       }),
     ),
     h(
@@ -414,7 +459,7 @@ function renderSpotifyImporter(): HTMLElement {
       h('div', { class: 'spotify-import__redirect-row' }, redirectText, copyRedirect),
       h('p', {
         class: 'panel__hint',
-        text: 'Spotify puede limitar las playlists disponibles a las que posees o en las que colaboras. La lista importada vive solo en esta pestaña; en tu biblioteca se guardarán únicamente las pistas libres que elijas.',
+        text: 'Spotify te pedirá permiso para leer tu biblioteca o playlist. Los nombres y portadas importados viven solo en esta pestaña; en Sonora se guardan únicamente las pistas libres que elijas.',
       }),
     ),
     form,
@@ -439,7 +484,10 @@ function renderImportedSpotifyTracks(container: HTMLElement): void {
     h(
       'div',
       {},
-      h('p', { class: 'spotify-import__playlist-kicker', text: 'Playlist leída desde Spotify' }),
+      h('p', {
+        class: 'spotify-import__playlist-kicker',
+        text: imported.id === 'spotify:saved-tracks' ? 'Biblioteca leída desde Spotify' : 'Playlist leída desde Spotify',
+      }),
       h('h3', { class: 'spotify-import__playlist-title', text: imported.name }),
       h('p', {
         class: 'spotify-import__playlist-count',
@@ -466,6 +514,8 @@ function renderImportedSpotifyTracks(container: HTMLElement): void {
               spotifyMatches.clear();
               spotifyMatchedPlaylistId = null;
               spotifyPlaylistCreation = null;
+              spotifyTrackPage = 0;
+              spotifyTrackQuery = '';
               container.replaceChildren();
             },
           },
@@ -487,9 +537,73 @@ function renderImportedSpotifyTracks(container: HTMLElement): void {
   }
   if (imported.tracks.length === 0) return;
 
+  const filterInput = h('input', {
+    class: 'url-download__input spotify-import__input',
+    type: 'search',
+    placeholder: 'Buscar entre tus canciones…',
+    value: spotifyTrackQuery,
+    ariaLabel: 'Filtrar canciones importadas',
+  }) as HTMLInputElement;
   const list = h('div', { class: 'spotify-track-list' });
-  for (const track of imported.tracks) list.append(renderSpotifyTrack(track));
-  container.append(list);
+  const pagination = h('div', { class: 'spotify-import__pagination' });
+
+  const renderTrackPage = (): void => {
+    const query = spotifyTrackQuery.trim().toLocaleLowerCase('es');
+    const filtered = imported.tracks.filter((track) =>
+      !query || (track.title + ' ' + track.artist + ' ' + track.album).toLocaleLowerCase('es').includes(query),
+    );
+    const pageCount = Math.max(1, Math.ceil(filtered.length / SPOTIFY_TRACK_PAGE_SIZE));
+    spotifyTrackPage = Math.min(spotifyTrackPage, pageCount - 1);
+    const start = spotifyTrackPage * SPOTIFY_TRACK_PAGE_SIZE;
+    const visible = filtered.slice(start, start + SPOTIFY_TRACK_PAGE_SIZE);
+    list.replaceChildren();
+    if (visible.length) {
+      for (const track of visible) list.append(renderSpotifyTrack(track));
+    } else {
+      list.append(h('p', { class: 'panel__hint', text: query ? 'No encontramos canciones con ese texto.' : 'No hay canciones para mostrar.' }));
+    }
+
+    const previous = h(
+      'button',
+      {
+        class: 'btn btn--ghost',
+        type: 'button',
+        disabled: spotifyTrackPage === 0 || filtered.length === 0,
+        on: { click: () => { spotifyTrackPage -= 1; renderTrackPage(); } },
+        text: 'Anterior',
+      },
+    );
+    const next = h(
+      'button',
+      {
+        class: 'btn btn--ghost',
+        type: 'button',
+        disabled: spotifyTrackPage >= pageCount - 1 || filtered.length === 0,
+        on: { click: () => { spotifyTrackPage += 1; renderTrackPage(); } },
+        text: 'Siguiente',
+      },
+    );
+    const firstShown = filtered.length ? start + 1 : 0;
+    const lastShown = Math.min(start + visible.length, filtered.length);
+    pagination.replaceChildren(
+      previous,
+      h('span', {
+        class: 'spotify-import__page-status',
+        text: filtered.length
+          ? `Mostrando ${firstShown}–${lastShown} de ${filtered.length} · Página ${spotifyTrackPage + 1} de ${pageCount}`
+          : '0 resultados',
+      }),
+      next,
+    );
+  };
+
+  filterInput.addEventListener('input', () => {
+    spotifyTrackQuery = filterInput.value;
+    spotifyTrackPage = 0;
+    renderTrackPage();
+  });
+  container.append(h('label', { class: 'spotify-import__filter' }, h('span', { class: 'url-download__label', text: 'Filtrar canciones' }), filterInput), list, pagination);
+  renderTrackPage();
   if (spotifyMatchedPlaylistId) {
     container.append(
       h(
