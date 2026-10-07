@@ -424,6 +424,8 @@ function renderSpotifyImporter(): HTMLElement {
     submitButton,
   );
 
+  playlistUrlInput.closest('label')?.toggleAttribute('hidden', spotifyImportMode === 'saved-tracks');
+
   const panel = h(
     'section',
     { class: 'panel spotify-import' },
