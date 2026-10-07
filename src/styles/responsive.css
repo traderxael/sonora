@@ -351,8 +351,3 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .welcome::after {
-    transform: none;
-  }
-}
