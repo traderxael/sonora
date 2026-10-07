@@ -6,7 +6,7 @@ let typedUrl = '';
 let activeController: AbortController | null = null;
 
 const MAX_DOWNLOAD_BYTES = 250 * 1024 * 1024;
-const AUDIO_EXTENSIONS = /\\.(mp3|flac|wav|ogg|oga|opus|m4a|aac|aif|aiff|webm)$/i;
+const AUDIO_EXTENSIONS = /\.(mp3|flac|wav|ogg|oga|opus|m4a|aac|aif|aiff|webm)$/i;
 
 export function renderDownloads(): HTMLElement {
   const view = h('div', { class: 'view view--downloads' });
@@ -107,9 +107,9 @@ export function renderDownloads(): HTMLElement {
       const contentType = (response.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
       const looksLikeAudio =
         contentType.startsWith('audio/') ||
-        /octet-stream|application\\/(ogg|flac|x-flac|mpeg)/i.test(contentType) ||
+        /octet-stream|application\/(ogg|flac|x-flac|mpeg)/i.test(contentType) ||
         AUDIO_EXTENSIONS.test(url.pathname);
-      if (!looksLikeAudio || /text\\/html|application\\/json/i.test(contentType)) {
+      if (!looksLikeAudio || /text\/html|application\/json/i.test(contentType)) {
         throw new Error('Ese enlace no apunta a un archivo de audio directo. Usa un enlace MP3, FLAC, WAV, OGG, M4A o similar.');
       }
 
@@ -231,8 +231,8 @@ function parseHttpUrl(value: string): URL | null {
 }
 
 function buildFilename(disposition: string | null, url: URL, contentType: string): string {
-  const encodedName = disposition?.match(/filename\\*\\s*=\\s*UTF-8''([^;]+)/i)?.[1];
-  const regularName = disposition?.match(/filename\\s*=\\s*(?:"([^"]+)"|([^;]+))/i);
+  const encodedName = disposition?.match(/filename\*\s*=\s*UTF-8''([^;]+)/i)?.[1];
+  const regularName = disposition?.match(/filename\s*=\s*(?:"([^"]+)"|([^;]+))/i);
   let name = encodedName
     ? decodeURIComponent(encodedName.trim().replace(/^"|"$/g, ''))
     : regularName?.[1] ?? regularName?.[2]?.trim() ?? '';
@@ -245,8 +245,8 @@ function buildFilename(disposition: string | null, url: URL, contentType: string
     }
   }
   if (!name || name.endsWith('/')) name = 'sonora-audio';
-  name = name.replace(/[<>:"/\\|?*\\u0000-\\u001F]/g, '-').replace(/[. ]+$/g, '').trim();
-  if (!/\\.[a-z0-9]{2,5}$/i.test(name)) {
+  name = name.replace(/[<>:"\/\\|?*\u0000-\u001F]/g, '-').replace(/[. ]+$/g, '').trim();
+  if (!/\.[a-z0-9]{2,5}$/i.test(name)) {
     const extension = contentType.includes('mpeg') ? 'mp3' : contentType.includes('ogg') ? 'ogg' : 'audio';
     name += `.${extension}`;
   }
